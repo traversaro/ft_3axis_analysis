@@ -30,24 +30,26 @@ Eigen::Matrix<double, 9, 6> getShoulderMeasurementMatrix(KDL::TreeFkSolverPos_re
     three_axis_measure(2,4) = 1.0;
 
     
-    //KDL::TreeFkSolverPos_recursive pos_slv(tree);
-    KDL::Frame link0_frame;
-    KDL::Frame link1_frame;
-    KDL::Frame link2_frame;
 
     std::string link0_name = "link0";
     std::string link1_name = "link1";
     std::string link2_name = "link2";
+    
+    //The frame are base, 0, 1, 2
+    KDL::Frame H_base_0;
+    KDL::Frame H_base_1;
+    KDL::Frame H_base_2;
 
-    pos_slv.JntToCart(q,link0_frame,link0_name);
-    pos_slv.JntToCart(q,link1_frame,link1_name);
-    pos_slv.JntToCart(q,link2_frame,link2_name);
+    pos_slv.JntToCart(q,H_base_0,link0_name);
+    pos_slv.JntToCart(q,H_base_1,link1_name);
+    pos_slv.JntToCart(q,H_base_2,link2_name);
 
     Eigen::Matrix<double, 9, 6> return_matrix;
     
-    return_matrix.block<3, 6>(0,0) = three_axis_measure*KDL::CoDyCo::WrenchTransformationMatrix(link0_frame);
-    return_matrix.block<3, 6>(3,0) = three_axis_measure*KDL::CoDyCo::WrenchTransformationMatrix(link1_frame);
-    return_matrix.block<3, 6>(6,0) = three_axis_measure*KDL::CoDyCo::WrenchTransformationMatrix(link2_frame);
+    
+    return_matrix.block<3, 6>(0,0) = three_axis_measure*KDL::CoDyCo::WrenchTransformationMatrix(H_base_0.Inverse()*H_base_2);
+    return_matrix.block<3, 6>(3,0) = three_axis_measure*KDL::CoDyCo::WrenchTransformationMatrix(H_base_1.Inverse()*H_base_2);
+    return_matrix.block<3, 6>(6,0) = three_axis_measure*KDL::CoDyCo::WrenchTransformationMatrix(H_base_2.Inverse()*H_base_2);
     
     return return_matrix;
 }
@@ -66,8 +68,8 @@ int main(int argc, char ** argv)
     
     opt.fromCommand(argc,argv);
     
-    if( !opt.check("urdf") ) {
-        std::cout << "Usage: 3axis_kdl_analysis --urdf shoulder.urdf --step 0.01 --output output.csv" << std::endl;
+    if( !opt.check("urdf") || ( opt.check("output3d") && opt.check("output2d") ) )  {
+        std::cout << "Usage: 3axis_kdl_analysis --urdf shoulder.urdf --step 0.01 --output3d output.csv" << std::endl;
     }
     
     KDL::Tree icub3shoulder;
@@ -82,8 +84,10 @@ int main(int argc, char ** argv)
     }
     
     std::string output_filename;
-    if( opt.check("output") ) {
-        output_filename = opt.find("output").asString();
+    if( opt.check("output3d") ) {
+        output_filename = opt.find("output3d").asString();
+    } else if ( opt.check("output2d") ) {
+        output_filename = opt.find("output2d").asString();
     } else {
         output_filename = "output.csv";
     }
@@ -102,20 +106,35 @@ int main(int argc, char ** argv)
     
     output_file.open(output_filename.c_str());
     
-    for(double q0=-M_PI; q0 <= M_PI; q0 += step) {
-        //if( fabs(q0-ceil(q0)) < step ) {
-            std::cout << "q0 " << q0 << std::endl;
-        //}
-        for(double q1=-M_PI; q1 <= M_PI; q1 += step) {
-            for(double q2=-M_PI; q2 <= M_PI; q2 += step) {
-                q(0) = q0;
-                q(1) = q1;
-                q(2) = q2;
-                double det = getDeterminantOfShoulderMatrix(pos_slv,q);
-                output_file << q0 << "," << q1 << "," << q2 << "," << det << std::endl;
+    if( opt.check("output3d") ) {
+        for(double q0=-M_PI; q0 <= M_PI; q0 += step) {
+            //if( fabs(q0-ceil(q0)) < step ) {
+                std::cout << "q0 " << q0 << std::endl;
+            //}
+            for(double q1=-M_PI; q1 <= M_PI; q1 += step) {
+                for(double q2=-M_PI; q2 <= M_PI; q2 += step) {
+                    q(0) = q0;
+                    q(1) = q1;
+                    q(2) = q2;
+                    double det = getDeterminantOfShoulderMatrix(pos_slv,q);
+                    output_file << q0 << "," << q1 << "," << q2 << "," << det << std::endl;
+                }
             }
         }
-    }
+    } 
+    
+        
+    if( opt.check("output2d") ) {
+            for(double q1=-M_PI; q1 <= M_PI; q1 += step) {
+                for(double q2=-M_PI; q2 <= M_PI; q2 += step) {
+                    q(0) = 0.0;
+                    q(1) = q1;
+                    q(2) = q2;
+                    double det = getDeterminantOfShoulderMatrix(pos_slv,q);
+                    output_file << q1 << "," << q2 << "," << det << std::endl;
+                }
+            }
+    } 
     
     output_file.close();
     
