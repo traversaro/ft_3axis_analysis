@@ -1,0 +1,36 @@
+
+<robot name="icub3shoulder">
+<link name="base">
+</link>
+
+<link name="link0">
+</link>
+
+<link name="link1">
+</link>
+
+<link name="link2">
+</link>
+
+<!-- a = 0.04, b=0.05, c = 0.007 -->
+<joint name="joint0" type="continuous">
+    <parent link="base"/>
+    <child link="link0"/>
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+    <axis xyz="0 0 1"/>
+</joint>
+
+<joint name="joint1" type="continuous">
+    <parent link="link0"/>
+    <child link="link1"/>
+    <origin rpy="1.5708 0.0 0.0" xyz="0.0 0.0 0.04"/>
+    <axis xyz="0 0 1"/>
+</joint>
+
+<joint name="joint2" type="continuous">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin rpy="-1.5708 0.0 0.0" xyz="0.007 0.05 0.0"/>
+    <axis xyz="0 0 1"/>
+</joint>
+</robot>
